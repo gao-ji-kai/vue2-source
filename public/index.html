@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <title>Document</title>
+</head>
+
+<body>
+  <script src="/dist/vue.js"></script>
+ 
+  <!-- 
+    渲染流程
+    模板编译原理   AST 抽象语法树(树的遍历)  先表示出html  再把html转换成JS语法
+
+    1.需要将模板变成一个render方法
+    2.需要去当前的实例上取值  with
+    3.虚拟dom ->就是个对象  可以描述dom结构(diff算法) 
+    4.生成一个真实的Dom结构扔到页面中
+   -->
+   <div id="app" style="color:red">
+    <div style="color:blue ;">
+      <span>{{name}} hah</span>
+    </div>
+  </div>
+
+  
+  <script>
+    //响应式数据变化  数据决定视图的样子   数据代理:我们操作数据，视图就得到更新 vue2中用object.defineProperty
+    //数据劫持  对数据的操作进行拦截
+    const vm = new Vue({//vue2 options APi   无法 tree-shaking
+      el: '#app',
+      data() {
+        return {
+          name: 'gaojkai',
+          obj: {
+            name: 1,
+            age: 28
+          },
+          arr: [1, 2, 3],//如果数组很长的话 性能就会很差，因为他每个数都会拦截一次  如果长度10000，就会拦截10000次 就很差
+          arr1: [{ a: 'world' }]//vue中数组中的对象 如果变化了  也需要更新视图  也需要被进行拦截操作
+        }
+      },
+      methods: {
+
+      },
+      computed: {
+
+      },
+    });
+    //如果用户进行更改对象，会覆盖原对象 这样的话就会失去get set方法  
+    // vm.obj={name:'gjk',age:20}
+
+    // vm.arr.push('hello')
+    // vm.arr.reverse()
+
+    vm.arr1.push({ b: 'hello' })
+    console.log(vm);
+
+      //console.log(vm._data)
+     // console.log(vm.name);//vm._data,name
+      // vm.$options//可以获取new Vue中配置的对象
+
+
+  </script>
+</body>
+
+</html>
