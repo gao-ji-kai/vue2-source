@@ -1,4 +1,5 @@
 import { compileToFunctions } from "./compiler/index";
+import { mountComponent } from "./lifecycle";
 import { initState } from "./state";
 
 export function initMixin(Vue) {
@@ -15,41 +16,44 @@ export function initMixin(Vue) {
       vm.$mount(vm.$options.el);
     }
   };
-  
+
   Vue.prototype.$mount = function (el) {
     el = document.querySelector(el);
     const vm = this;
     const options = vm.$options;
-   
+    vm.$options.el = el;//id="app"
     //如果有render直接使用render即可，没有render看有没有template属性，没有template就接着找外部模板
     if (!options.render) {
       let template = options.template;
       if (!template && el) {
         template = el.outerHTML; //火狐不兼容 document.createElement('div').appendChild('app').innerHTML
       }
-      
+
       console.log(template);
 
       //如何将模板编译成render函数
       const render = compileToFunctions(template); //将模板编译成一个函数
       options.render = render;
     }
+
+    mountComponent(vm, el) //组件挂载  
+
   };
 
 
-//   Vue.prototype.$mount = function (el){
-//     el =document.querySelector(el);
-//     const vm =this;
-//     const options = vm.$options
-// //如果有render直接使用render即可，没有render看有没有template属性，没有template就接着找外部模板
-//     if(!options.render){
-//       let template = options.template;
-//       if(!template && el){
-//         template = el.outHTML
-//       }
-//       console.log(template)
-//     }
-//   }
+  //   Vue.prototype.$mount = function (el){
+  //     el =document.querySelector(el);
+  //     const vm =this;
+  //     const options = vm.$options
+  // //如果有render直接使用render即可，没有render看有没有template属性，没有template就接着找外部模板
+  //     if(!options.render){
+  //       let template = options.template;
+  //       if(!template && el){
+  //         template = el.outHTML
+  //       }
+  //       console.log(template)
+  //     }
+  //   }
 }
 //vue的数据   data props computed  watch...
 // export function initState(vm) {

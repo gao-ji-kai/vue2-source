@@ -367,6 +367,165 @@
     return fn;
   }
 
+  function patch(oldVnode, Vnode) {
+    //oldVnode是一个真实额元素 (首次渲染)
+    //console.log(oldVnode, newVnode)
+    var isRealElement = oldVnode.nodeType;
+    if (isRealElement) {
+      //初次渲染
+      var oldElm = oldVnode; //拿到 id="app"
+      var parentElm = oldElm.parentNode; //拿到父元素 body
+
+      var el = createElm(Vnode); //根据虚拟节点 创建出真实节点
+      parentElm.insertBefore(el, oldElm.nextSibling); //将创建的节点插到原有的节点的下一个
+      parentElm.removeChild(oldElm);
+      return el; //vm.$el
+    }
+  }
+
+  //根据虚拟节点 创建出真实节点
+  function createElm(vnode) {
+    var vm = vnode.vm,
+      tag = vnode.tag,
+      data = vnode.data,
+      key = vnode.key,
+      children = vnode.children,
+      text = vnode.text;
+    if (typeof tag === 'string') {
+      //也可能是个组件 先不考虑
+      vnode.el = document.createElement(tag); //用vue的指令时，可以用过vnode拿到真实的dom  虚拟节点配合真实dom
+      //更新dom上的属性
+      updateProperties(vnode);
+
+      //有可能有儿子
+      children.forEach(function (child) {
+        //可能有文本  可能有元素
+        //根据子节点 创建元素
+        vnode.el.appendChild(createElm(child)); //递归创建
+      });
+    } else {
+      //文本情况
+      vnode.el = document.createTextNode(text);
+    }
+    return vnode.el;
+  }
+  function updateProperties(vnode) {
+    var newProps = vnode.data || {}; //属性
+    var el = vnode.el; //dom元素
+
+    for (var key in newProps) {
+      if (key == 'style') {
+        for (var styleName in newProps.style) {
+          el.style[styleName] = newProps.style[styleName];
+        }
+      } else if (key == 'class') {
+        el.className = newProps["class"];
+      } else {
+        el.setAttribute(key, newProps[key]);
+      }
+    }
+  }
+
+  //我们可以把当前watcher 放到一个全局变量上
+  var id = 0; //为了保持dep的唯一性
+  var Dep = /*#__PURE__*/function () {
+    function Dep() {
+      _classCallCheck(this, Dep);
+      this.id = id++;
+      this.subs = []; //属性要记住watcher
+    }
+    _createClass(Dep, [{
+      key: "depend",
+      value: function depend() {
+        //让watcher记住dep
+        //获取watcher
+        Dep.target.addDep(this); //这里的this指的是Dep  name=>watcher  
+      }
+      //让dep记住watcher  
+    }, {
+      key: "addSub",
+      value: function addSub(watcher) {
+        //存储watcher
+        this.subs.push(watcher);
+      }
+    }]);
+    return Dep;
+  }();
+  Dep.target = null; //类的静态属性
+  function pushTarget(watcher) {
+    Dep.watcher = watcher;
+  }
+  function popTarget() {
+    Dep.target = null;
+  }
+
+  //每个组件间有多个watcher  所以需要加一个唯一标识  
+  var id$1 = 0;
+  var Watcher = /*#__PURE__*/function () {
+    function Watcher(vm, exprOrFn, cb, options) {
+      _classCallCheck(this, Watcher);
+      this.vm = vm;
+      this.cb = cb;
+      this.options = options;
+      this.id = id$1++;
+      this.getter = exprOrFn;
+      this.drps = [];
+      this.depsId = new Set(); //去重  
+
+      this.get(); //调用传入的函数 调用了render方法  此时会对模板中的数据进行取值
+    }
+    _createClass(Watcher, [{
+      key: "get",
+      value: function get() {
+        //这个方法中会对属性进行取值操作
+        pushTarget(this); //给Dep.target赋了值 =watcher
+        this.getter(); //会取值  执行了observer中index.js中的54行 
+        popTarget(); //Dep.target = null;
+      }
+    }, {
+      key: "addDep",
+      value: function addDep(dep) {
+        var id = dep.id;
+        if (!this.depsId.has(id)) {
+          //dep是非重复的
+          this.depsId.add(id);
+          this.deps.push(dep);
+          dep.addSub(this);
+        }
+      }
+      //当属性取值时  需要记住这个watcher，稍后变化了  去执行自己记住的watcher即可
+      //依赖收集
+    }]);
+    return Watcher;
+  }();
+
+  //渲染成真实DOM的
+  function lifecycleMixin(Vue) {
+    Vue.prototype._update = function (vnode) {
+      // console.log('update', vnode);
+      //将虚拟节点转换成真实dom
+      var vm = this;
+
+      //首次渲染 需要用虚拟节点 来更新真实的dom元素
+      //初始化渲染的时候 会创建一个新节点 并且将老节点删掉
+      //第一次渲染完毕后 拿到新的节点 下次再次渲染时替换上次渲染的结果
+      vm.$options.el = patch(vm.$options.el, vnode);
+    };
+  }
+  function mountComponent(vm, el) {
+    console.log(vm, el);
+
+    //Vue渲染机制
+    //Vue默认通过watcher来进行渲染的 = 渲染watcher(每一个组件都有一个渲染watcher)
+
+    var updateComponent = function updateComponent() {
+      //调用runder方法
+      vm._update(vm._render()); //返回的是虚拟节点   是一个对象 vm._update是将虚拟节点转化为真实节点
+    };
+    //让实例的某某方法执行  四个参数   后面加true是为了表明 该watcher是一个渲染watcher
+    new Watcher(vm, updateComponent, function () {}, true); //这句话就是相当于让 updateComponent 执行 updateComponent();
+  }
+
   //首先  我需要拿到原来数组原型上的方法  天生自带的方法
   var oldArrayProtoMethods = Array.prototype;
 
@@ -474,9 +633,15 @@
     observe(value); //对结果进行递归拦截
 
     //defineProperty是重写了get，set方法，而proxy是设置一个代理  不用改写原对象
-
+    var dep = new Dep(); //观察者模式  每次都会给属性创建个dep
     Object.defineProperty(data, key, {
+      //需要给每个属性都增加个dep
       get: function get() {
+        if (Dep.target) {
+          dep.depend(); //让这个属性自己的dep记住这个watcher  也会让watcher记住这个dep   一个双向的过程
+        }
+
+        console.log(key);
         return value;
       },
       set: function set(newValue) {
@@ -579,7 +744,7 @@
       el = document.querySelector(el);
       var vm = this;
       var options = vm.$options;
-
+      vm.$options.el = el; //id="app"
       //如果有render直接使用render即可，没有render看有没有template属性，没有template就接着找外部模板
       if (!options.render) {
         var template = options.template;
@@ -593,6 +758,7 @@
         var render = compileToFunctions(template); //将模板编译成一个函数
         options.render = render;
       }
+      mountComponent(vm, el); //组件挂载  
     };
 
     //   Vue.prototype.$mount = function (el){
@@ -641,6 +807,63 @@
 
   // }
 
+  //导出 创建元素虚拟节点
+  function createElement(vm, tag) {
+    var data = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
+    for (var _len = arguments.length, children = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
+      children[_key - 3] = arguments[_key];
+    }
+    return vnode(vm, tag, data, data.key, children, undefined);
+  }
+  //导出创建文本虚拟节点
+  function createTextVnode(vm, text) {
+    return vnode(vm, undefined, undefined, undefined, undefined, text);
+  }
+
+  //vue底层用的是个类 这里用个方法
+  function vnode(vm, tag, data, key, children, text) {
+    return {
+      vm: vm,
+      tag: tag,
+      children: children,
+      data: data,
+      key: key,
+      text: text
+    };
+  }
+  //vnode(虚拟DOM)和AST(抽象树)  vnode 可以随意添加属性  AST是针对语法解析出来的结构不能添加不存在的属性
+
+  function renderMixin(Vue) {
+    //创建元素的虚拟节点
+    Vue.prototype._c = function () {
+      for (var _len = arguments.length, args = new Array(_len), _key = 0; _key < _len; _key++) {
+        args[_key] = arguments[_key];
+      }
+      return createElement.apply(void 0, [this].concat(args)); //可以多传参数
+    };
+    //创建文本的虚拟节点
+    Vue.prototype._v = function (text) {
+      return createTextVnode(this, text);
+    };
+    //转化成字符串
+    Vue.prototype._s = function (val) {
+      return val == null ? '' : _typeof(val) == 'object' ? JSON.stringify(val) : val;
+    };
+
+    //调用自定义render方法
+    Vue.prototype._render = function () {
+      //render
+      //console.log('render')
+      var vm = this;
+      var render = vm.$options.render; //获取编译后额render方法
+      //调用render方法 产生虚拟节点 让render执行
+      //render中有很多自定义的方法  如_c  _v  所以 会报错 
+      var vnode = render.call(vm); //_c(xxx，xxx)  调用时会自动将变量进行取值，将实例结果进行渲染
+
+      return vnode; //虚拟节点
+    };
+  }
+
   //Vue2.0中就是一个构造函数 如果用class(类)的话  
 
   // class Vue{
@@ -659,6 +882,12 @@
   //可以拆分逻辑到不同的文件中 更利于代码维护  模块化的概念
 
   initMixin(Vue); //初始化混合
+
+  // Vue.prototype._init = function (options) {
+
+  // };
+  lifecycleMixin(Vue); //更新逻辑   扩展_update方法
+  renderMixin(Vue); //调用render方法的逻辑 扩展_render方法
 
   //库->rollup   项目开发->webpack
 

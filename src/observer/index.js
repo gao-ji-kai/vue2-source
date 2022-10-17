@@ -1,4 +1,5 @@
 import { arrayMethods } from "./array";
+import Dep from "./dep";
 //对数组和对象进行拦截
 class Observer {
   constructor(value) {
@@ -49,9 +50,13 @@ function defineReactive(data, key, value) {
   observe(value); //对结果进行递归拦截
 
   //defineProperty是重写了get，set方法，而proxy是设置一个代理  不用改写原对象
-
-  Object.defineProperty(data, key, {
+  let dep = new Dep//观察者模式  每次都会给属性创建个dep
+  Object.defineProperty(data, key, {//需要给每个属性都增加个dep
     get() {
+      if (Dep.target) {
+        dep.depend();//让这个属性自己的dep记住这个watcher  也会让watcher记住这个dep   一个双向的过程
+      }
+      console.log(key)
       return value;
     },
     set(newValue) {
