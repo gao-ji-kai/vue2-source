@@ -448,6 +448,13 @@
         //存储watcher
         this.subs.push(watcher);
       }
+    }, {
+      key: "notify",
+      value: function notify() {
+        this.subs.forEach(function (watcher) {
+          return watcher.update();
+        });
+      }
     }]);
     return Dep;
   }();
@@ -457,6 +464,64 @@
   }
   function popTarget() {
     Dep.target = null;
+  }
+
+  var callbacks = [];
+  function flushCallbacks() {
+    for (var i = 0; i < callbacks.length; i++) {
+      var callback = callbacks[i];
+      callback();
+    }
+    waiting = false;
+  }
+  //批处理  第一次开定时器  后续只更新列表  之后执行清空逻辑
+
+  //第一次cb是渲染watcher  更新操作  (渲染watcher执行的过程肯定是同步的)
+  //第二次的cb是用户传入的回调
+  var waiting = false;
+  function nextTick(cb) {
+    W;
+    callbacks.push(cb); //目前默认的cb  是渲染逻辑  用户的逻辑放到渲染逻辑之后即可
+
+    if (!waiting) {
+      waiting = true;
+      //vue2 做兼容性处理先判断是否支持Promise，如果不支持就采用MutationObserver()，然后是seImmediate（ie专用），最后是setTimeout，依次判断。
+
+      Promise.resolve().then(flushCallbacks); //多次调用nextTick 只会开启一个promise
+    }
+  }
+
+  //nextTick肯定有异步功能
+
+  var has = {};
+  var queue = [];
+  function flusghSchedularQueue() {
+    for (var i = 0; i < queue.length; i++) {
+      var watcher = queue[i];
+      watcher.run();
+    }
+    queue = [];
+    has = {};
+    pending = false;
+  }
+
+  //vue更新操作是异步操作
+  //多次调用queueWatcher 如果watcher不是同一个
+  var pending = false;
+  function queueWatcher(watcher) {
+    //调度更新几次
+    //更新时将watcher去重
+    var id = watcher.id;
+    if (has[id] == null) {
+      queue.push(watcher);
+      has[id] = true;
+      console.log(queue);
+      //让queue清空
+      if (!pending) {
+        pending = true;
+        nextTick(flusghSchedularQueue);
+      }
+    }
   }
 
   //每个组件间有多个watcher  所以需要加一个唯一标识  
@@ -492,6 +557,20 @@
           this.deps.push(dep);
           dep.addSub(this);
         }
+      }
+    }, {
+      key: "run",
+      value: function run() {
+        get();
+      }
+    }, {
+      key: "update",
+      value: function update() {
+        //如果多次更改，我希望合并一次  (可以看成防抖)
+        // this.get()//不停地重新渲染
+
+        console.log(this); //此处this指向watcher
+        queueWatcher(this); //此时可能有重复的
       }
       //当属性取值时  需要记住这个watcher，稍后变化了  去执行自己记住的watcher即可
       //依赖收集
@@ -648,9 +727,11 @@
         if (newValue === value) return;
         observe(value); //如果用户设置的是一个对象，就继续将用户设置的对象变为响应式的
         value = newValue;
+        dep.notify(); //通知dep中记录的watcher让它去执行
       }
     });
   }
+
   function observe(data) {
     //console.log(data, "----------");
     //只对对象类型进行观测，非对象类型无法观测
@@ -740,6 +821,7 @@
         vm.$mount(vm.$options.el);
       }
     };
+    Vue.prototype.$nextTick = nextTick;
     Vue.prototype.$mount = function (el) {
       el = document.querySelector(el);
       var vm = this;

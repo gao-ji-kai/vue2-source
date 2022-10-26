@@ -1,4 +1,5 @@
 import { popTarget, pushTarget } from "./dep";
+import { queueWatcher } from "./schedular";
 
 //每个组件间有多个watcher  所以需要加一个唯一标识  
 let id = 0;
@@ -27,7 +28,19 @@ class Watcher {
             dep.addSub(this)
         }
     }
+    run() {
+        this, get();
+    }
+
+    update() {//如果多次更改，我希望合并一次  (可以看成防抖)
+       // this.get()//不停地重新渲染
+        
+        console.log(this)//此处this指向watcher
+        queueWatcher(this)//此时可能有重复的
+    }
     //当属性取值时  需要记住这个watcher，稍后变化了  去执行自己记住的watcher即可
     //依赖收集
 }
+
+
 export default Watcher;

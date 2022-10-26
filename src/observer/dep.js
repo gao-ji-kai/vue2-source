@@ -15,6 +15,9 @@ class Dep {
     addSub(watcher) {//存储watcher
         this.subs.push(watcher)
     }
+    notify() {
+        this.subs.forEach(watcher => watcher.update())
+    }
 }
 Dep.target = null;//类的静态属性
 export function pushTarget(watcher) {

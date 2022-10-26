@@ -63,6 +63,8 @@ function defineReactive(data, key, value) {
       if (newValue === value) return;
       observe(value); //如果用户设置的是一个对象，就继续将用户设置的对象变为响应式的
       value = newValue;
+
+      dep.notify()//通知dep中记录的watcher让它去执行
     },
   });
 }

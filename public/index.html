@@ -69,7 +69,9 @@
       //依赖收集
       setTimeout(() => {
         vm.name = "wyh"; //希望数据更新可以自动更新视图，而不是用户手动触发
-        vm._update(vm._render()); //强制更新的方法
+        vm.name = "hahah";
+       
+       // vm._update(vm._render()); //强制更新的方法
       }, 1000);
     </script>
   </body>
