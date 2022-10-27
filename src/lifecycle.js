@@ -12,7 +12,17 @@ export function lifecycleMixin(Vue) {
         //初始化渲染的时候 会创建一个新节点 并且将老节点删掉
 
         //第一次渲染完毕后 拿到新的节点 下次再次渲染时替换上次渲染的结果
-        vm.$options.el = patch(vm.$options.el, vnode);
+        vm.$el = patch(vm.$el, vnode);
+    }
+}
+
+//调用生命周期钩子函数  发布模式
+export function callHook(vm,hook) {
+    const handlers = vm.$options[hook]
+    if (handlers) {
+        handlers.forEach(handler => {
+            handler.call(vm)
+        });
     }
 }
 

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Document</title>
+  </head>
+
+  <body>
+    <script src="/dist/vue.js"></script>
+
+    <div id="app" a="1" b="2" style="background: pink">
+      <ul>
+        {{arr}}
+      </ul>
+    </div>
+
+    <script>
+      //响应式数据变化  数据决定视图的样子   数据代理:我们操作数据，视图就得到更新 vue2中用object.defineProperty
+      //数据劫持  对数据的操作进行拦截
+      const vm = new Vue({
+        //vue2 options APi   无法 tree-shaking
+        el: "#app",
+        data() {
+          return {
+            //内部会给arr这个属性增加依赖  但我们更改数组时不会去更新通知
+            //如果这样写 只对外层数组进行了依赖收集  但是内层数组没有进行依赖收集
+            arr: [[1, 2, 3]],
+          };
+        },
+      });
+      setTimeout(() => {
+        vm.arr.push(5);
+      }, 1000);
+    </script>
+  </body>
+</html>

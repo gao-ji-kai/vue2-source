@@ -1,14 +1,17 @@
 import { compileToFunctions } from "./compiler/index";
-import { mountComponent } from "./lifecycle";
+import { callHook, mountComponent } from "./lifecycle";
 import { initState } from "./state";
-import { nextTick } from "./until/until";
+import { mergeOptions, nextTick } from "./until/until";
 
 export function initMixin(Vue) {
   Vue.prototype._init = function (options) {
     //console.log(options);
     const vm = this;
-    vm.$options = options; //在实例上有个属性$options 表示的是用户传入的所有属性
+   // vm.$options = options; //在实例上有个属性$options 表示的是用户传入的所有属性
+    vm.$options = mergeOptions(vm.constructor.options, options)
+    console.log(vm.$options)
 
+    callHook(vm,'beforeCreate')
     //初始化状态   可能初始化很多东西 逻辑很多  一个功能写一个方法
     initState(vm);
 
@@ -22,7 +25,7 @@ export function initMixin(Vue) {
     el = document.querySelector(el);
     const vm = this;
     const options = vm.$options;
-    vm.$options.el = el;//id="app"
+    vm.$el = el;//id="app"
     //如果有render直接使用render即可，没有render看有没有template属性，没有template就接着找外部模板
     if (!options.render) {
       let template = options.template;

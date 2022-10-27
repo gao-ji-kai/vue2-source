@@ -1,5 +1,6 @@
 //Vue2.0中就是一个构造函数 如果用class(类)的话  
 
+import { initGlobalAPI } from "./global-api/index";
 import { initMixin } from "./init";
 import { lifecycleMixin } from "./lifecycle";
 import { renderMixin } from "./render";
@@ -13,7 +14,7 @@ import { renderMixin } from "./render";
 
 //构造函数
 function Vue(options) {
-    console.log(options)
+    //console.log(options)
     this._init(options)//当用户new Vue时就调用init方法进行vue的初始化方法
 }
 
@@ -27,6 +28,9 @@ initMixin(Vue);//初始化混合
 // };
 lifecycleMixin(Vue);//更新逻辑   扩展_update方法
 renderMixin(Vue);//调用render方法的逻辑 扩展_render方法
+
+
+initGlobalAPI(Vue)//混入全局的API
 
 
 export default Vue

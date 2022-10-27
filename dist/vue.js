@@ -4,6 +4,27 @@
   (global = typeof globalThis !== 'undefined' ? globalThis : global || self, global.Vue = factory());
 }(this, (function () { 'use strict';
 
+  function ownKeys(object, enumerableOnly) {
+    var keys = Object.keys(object);
+    if (Object.getOwnPropertySymbols) {
+      var symbols = Object.getOwnPropertySymbols(object);
+      enumerableOnly && (symbols = symbols.filter(function (sym) {
+        return Object.getOwnPropertyDescriptor(object, sym).enumerable;
+      })), keys.push.apply(keys, symbols);
+    }
+    return keys;
+  }
+  function _objectSpread2(target) {
+    for (var i = 1; i < arguments.length; i++) {
+      var source = null != arguments[i] ? arguments[i] : {};
+      i % 2 ? ownKeys(Object(source), !0).forEach(function (key) {
+        _defineProperty(target, key, source[key]);
+      }) : Object.getOwnPropertyDescriptors ? Object.defineProperties(target, Object.getOwnPropertyDescriptors(source)) : ownKeys(Object(source)).forEach(function (key) {
+        Object.defineProperty(target, key, Object.getOwnPropertyDescriptor(source, key));
+      });
+    }
+    return target;
+  }
   function _typeof(obj) {
     "@babel/helpers - typeof";
 
@@ -34,6 +55,19 @@
       writable: false
     });
     return Constructor;
+  }
+  function _defineProperty(obj, key, value) {
+    if (key in obj) {
+      Object.defineProperty(obj, key, {
+        value: value,
+        enumerable: true,
+        configurable: true,
+        writable: true
+      });
+    } else {
+      obj[key] = value;
+    }
+    return obj;
   }
   function _slicedToArray(arr, i) {
     return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _unsupportedIterableToArray(arr, i) || _nonIterableRest();
@@ -80,6 +114,101 @@
   }
   function _nonIterableRest() {
     throw new TypeError("Invalid attempt to destructure non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method.");
+  }
+
+  var callbacks = [];
+  function flushCallbacks() {
+    for (var i = 0; i < callbacks.length; i++) {
+      var callback = callbacks[i];
+      callback();
+    }
+    waiting = false;
+  }
+  //批处理  第一次开定时器  后续只更新列表  之后执行清空逻辑
+
+  //第一次cb是渲染watcher  更新操作  (渲染watcher执行的过程肯定是同步的)
+  //第二次的cb是用户传入的回调
+  var waiting = false;
+  function nextTick(cb) {
+    callbacks.push(cb); //目前默认的cb  是渲染逻辑  用户的逻辑放到渲染逻辑之后即可
+
+    if (!waiting) {
+      waiting = true;
+      //vue2 做兼容性处理先判断是否支持Promise，如果不支持就采用MutationObserver()，然后是seImmediate（ie专用），最后是setTimeout，依次判断。
+
+      Promise.resolve().then(flushCallbacks); //多次调用nextTick 只会开启一个promise
+    }
+  }
+
+  //nextTick肯定有异步功能
+
+  var isObject = function isObject(val) {
+    return _typeof(val) == 'object' && val != null;
+  };
+  var LIFECYCLE_HOOKS = ['beforeCreate', 'created', 'beforeMount', 'mounted'];
+  var strats = {};
+  function mergeHook(parentVal, childVal) {
+    console.log(parentVal, childVal);
+    if (childVal) {
+      //如果没有儿子
+      if (parentVal) {
+        return parentVal.concat(childVal);
+      } else {
+        //如果儿子有父亲没有
+        return [childVal];
+      }
+    } else {
+      return parentVal;
+    }
+  }
+  LIFECYCLE_HOOKS.forEach(function (hook) {
+    strats[hook] = mergeHook;
+  });
+  function mergeOptions(parent, child) {
+    //console.log(parent, child)
+    var options = {};
+    //{a:1}  {a:2} =>  合并后  {a:2}
+    //{a:1}       =>  合并后{a:1}
+    //自定义策略
+    //1.如果父亲有，儿子也有 应该用儿子替换父亲
+    //2.如果父亲有值  儿子没有  用父亲的 
+
+    for (var key in parent) {
+      mergeField(key);
+    }
+    for (var _key in child) {
+      if (parent.hasOwnProperty(_key)) {
+        mergeField(_key);
+      }
+    }
+    function mergeField(key) {
+      //策略模式
+      if (strats[key]) {
+        return options[key] = strats[key](parent[key], child[key]);
+      }
+      if (isObject(parent[key]) && isObject(child[key])) {
+        options[key] = _objectSpread2(_objectSpread2({}, parent[key]), child[key]);
+      } else {
+        if (child[key]) {
+          //如果儿子有值   以儿子的值为准
+          options[key] = child[key];
+        } else {
+          options[key] = parent[key];
+        }
+      }
+    }
+    return options;
+  }
+
+  function initGlobalAPI(Vue) {
+    Vue.options = {}; //用来存储全局的配置   例如   页面调取了两次mixin  就应该将第一的的mixi中的内容先存储 然后将第二个跟第一个做合并
+    //filter directive component
+    Vue.mixin = function (mixin) {
+      //mergeOptions
+      this.options = mergeOptions(this.options, mixin);
+      //console.log(this.options)
+      return this;
+    };
   }
 
   var defaultTagRE = /\{\{((?:.|\r?\n)+?)\}\}/g; //{{}}
@@ -468,32 +597,6 @@
     Dep.target = null;
   }
 
-  var callbacks = [];
-  function flushCallbacks() {
-    for (var i = 0; i < callbacks.length; i++) {
-      var callback = callbacks[i];
-      callback();
-    }
-    waiting = false;
-  }
-  //批处理  第一次开定时器  后续只更新列表  之后执行清空逻辑
-
-  //第一次cb是渲染watcher  更新操作  (渲染watcher执行的过程肯定是同步的)
-  //第二次的cb是用户传入的回调
-  var waiting = false;
-  function nextTick(cb) {
-    callbacks.push(cb); //目前默认的cb  是渲染逻辑  用户的逻辑放到渲染逻辑之后即可
-
-    if (!waiting) {
-      waiting = true;
-      //vue2 做兼容性处理先判断是否支持Promise，如果不支持就采用MutationObserver()，然后是seImmediate（ie专用），最后是setTimeout，依次判断。
-
-      Promise.resolve().then(flushCallbacks); //多次调用nextTick 只会开启一个promise
-    }
-  }
-
-  //nextTick肯定有异步功能
-
   var has = {};
   var queue = [];
   function flushSchedularQueue() {
@@ -588,8 +691,18 @@
       //初始化渲染的时候 会创建一个新节点 并且将老节点删掉
 
       //第一次渲染完毕后 拿到新的节点 下次再次渲染时替换上次渲染的结果
-      vm.$options.el = patch(vm.$options.el, vnode);
+      vm.$el = patch(vm.$el, vnode);
     };
+  }
+
+  //调用生命周期钩子函数  发布模式
+  function callHook(vm, hook) {
+    var handlers = vm.$options[hook];
+    if (handlers) {
+      handlers.forEach(function (handler) {
+        handler.call(vm);
+      });
+    }
   }
   function mountComponent(vm, el) {
     console.log(vm, el);
@@ -837,8 +950,10 @@
     Vue.prototype._init = function (options) {
       //console.log(options);
       var vm = this;
-      vm.$options = options; //在实例上有个属性$options 表示的是用户传入的所有属性
-
+      // vm.$options = options; //在实例上有个属性$options 表示的是用户传入的所有属性
+      vm.$options = mergeOptions(vm.constructor.options, options);
+      console.log(vm.$options);
+      callHook(vm, 'beforeCreate');
       //初始化状态   可能初始化很多东西 逻辑很多  一个功能写一个方法
       initState(vm);
       if (vm.$options.el) {
@@ -851,7 +966,7 @@
       el = document.querySelector(el);
       var vm = this;
       var options = vm.$options;
-      vm.$options.el = el; //id="app"
+      vm.$el = el; //id="app"
       //如果有render直接使用render即可，没有render看有没有template属性，没有template就接着找外部模板
       if (!options.render) {
         var template = options.template;
@@ -981,7 +1096,7 @@
 
   //构造函数
   function Vue(options) {
-    console.log(options);
+    //console.log(options)
     this._init(options); //当用户new Vue时就调用init方法进行vue的初始化方法
   }
 
@@ -995,6 +1110,8 @@
   // };
   lifecycleMixin(Vue); //更新逻辑   扩展_update方法
   renderMixin(Vue); //调用render方法的逻辑 扩展_render方法
+
+  initGlobalAPI(Vue); //混入全局的API
 
   //库->rollup   项目开发->webpack
 
