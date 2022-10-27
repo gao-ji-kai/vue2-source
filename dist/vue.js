@@ -459,6 +459,8 @@
     return Dep;
   }();
   Dep.target = null; //类的静态属性
+
+  //收集依赖
   function pushTarget(watcher) {
     Dep.watcher = watcher;
   }
@@ -480,7 +482,6 @@
   //第二次的cb是用户传入的回调
   var waiting = false;
   function nextTick(cb) {
-    W;
     callbacks.push(cb); //目前默认的cb  是渲染逻辑  用户的逻辑放到渲染逻辑之后即可
 
     if (!waiting) {
@@ -495,7 +496,7 @@
 
   var has = {};
   var queue = [];
-  function flusghSchedularQueue() {
+  function flushSchedularQueue() {
     for (var i = 0; i < queue.length; i++) {
       var watcher = queue[i];
       watcher.run();
@@ -519,7 +520,7 @@
       //让queue清空
       if (!pending) {
         pending = true;
-        nextTick(flusghSchedularQueue);
+        nextTick(flushSchedularQueue);
       }
     }
   }
@@ -543,7 +544,7 @@
       key: "get",
       value: function get() {
         //这个方法中会对属性进行取值操作
-        pushTarget(this); //给Dep.target赋了值 =watcher
+        pushTarget(this); // 给Dep.target赋了值 =watcher
         this.getter(); //会取值  执行了observer中index.js中的54行 
         popTarget(); //Dep.target = null;
       }
@@ -561,19 +562,17 @@
     }, {
       key: "run",
       value: function run() {
-        get();
+        this.get();
       }
     }, {
       key: "update",
       value: function update() {
         //如果多次更改，我希望合并一次  (可以看成防抖)
         // this.get()//不停地重新渲染
-
         console.log(this); //此处this指向watcher
         queueWatcher(this); //此时可能有重复的
       }
-      //当属性取值时  需要记住这个watcher，稍后变化了  去执行自己记住的watcher即可
-      //依赖收集
+      //当属性取值时  需要记住这个watcher，稍后变化了  去执行自己记住的watcher即可     依赖收集
     }]);
     return Watcher;
   }();
@@ -584,9 +583,10 @@
       // console.log('update', vnode);
       //将虚拟节点转换成真实dom
       var vm = this;
-
+      console.log(vm.$options.el, vnode);
       //首次渲染 需要用虚拟节点 来更新真实的dom元素
       //初始化渲染的时候 会创建一个新节点 并且将老节点删掉
+
       //第一次渲染完毕后 拿到新的节点 下次再次渲染时替换上次渲染的结果
       vm.$options.el = patch(vm.$options.el, vnode);
     };
@@ -651,6 +651,7 @@
         //如果有值 都需要调observeArray()  这里的this指向调用者 this.__ob__.observeArray(inserted) 
         ob.observeArray(inserted);
       }
+      ob.dep.notify();
       return result;
     };
   });
@@ -665,6 +666,8 @@
 
       //增加一个自定义属性
       //value.__ob__=this;
+
+      this.dep = new Dep(); //给数组本身和对象本身增加一个dep属性
       Object.defineProperty(value, "__ob__", {
         value: this,
         enumerable: false,
@@ -690,6 +693,7 @@
       value: function observeArray(value) {
         //拿到数组每一项
         for (var i = 0; i < value.length; i++) {
+          //如果数组中是对象的话  就会去递归观测  观测对的时候会增加__ob__属性
           observe(value[i]);
         }
       }
@@ -705,12 +709,23 @@
     }]);
     return Observer;
   }();
+  function dependArray(value) {
+    //该方法就是让里层数组收集外层数组的依赖，这样修改里层数也可以更新视图
+    for (var i = 0; i < value.length; i++) {
+      var current = value[i];
+      current.__obj__ && current.__obj__.dep.depend(); //让里层的和外层的 收集的都是用一个watcher
+      if (Array.isArray(current)) {
+        dependArray(current);
+      }
+    }
+  }
   function defineReactive(data, key, value) {
+    console.log(value, '444');
     //vue2中数据嵌套不要过深，过深浪费性能
 
     //value的值可能是个对象
-    observe(value); //对结果进行递归拦截
-
+    var childOb = observe(value); //对结果进行递归拦截
+    //console.log(childOb.dep)
     //defineProperty是重写了get，set方法，而proxy是设置一个代理  不用改写原对象
     var dep = new Dep(); //观察者模式  每次都会给属性创建个dep
     Object.defineProperty(data, key, {
@@ -718,8 +733,15 @@
       get: function get() {
         if (Dep.target) {
           dep.depend(); //让这个属性自己的dep记住这个watcher  也会让watcher记住这个dep   一个双向的过程
+          //childOb有可能是对象  有可能是数组
+          if (childOb) {
+            //如果对数组取值 会将当前的watcher和数组进行关联
+            childOb.dep.depend();
+            if (Array.isArray(value)) {
+              dependArray(value);
+            }
+          }
         }
-
         console.log(key);
         return value;
       },
@@ -746,6 +768,9 @@
     //通过类来实现对数据的观测   类可以方便扩展  会产生实例  实例可作为唯一标识
     return new Observer(data);
   }
+
+  //初始化状态函数中，主要是针对不同情况做不同的初始化。
+  //例如传入data，传入props，传入methods等等，需要分别初始化。
 
   //vue的数据   data props computed  watch...
   function initState(vm) {
@@ -790,7 +815,7 @@
     //console.log(vm);
     //进行数据劫持  Object.defineProperty
     //拿到用户传来的数据
-    var data = vm.$options.data; //拿到的data有两种情况  一种是对象，一种是函数
+    var data = vm.$options.data; //拿到的data有两种情况  一种是对象，一种是函数 根实例可以是对象，可以是函数，组件中data必须是函数
     //对data类型进行判断  如果是函数  获取函数返回值作为对象
     //用call是为了保证date中如果写了this  保证this永远指向当前的实例
     data = vm._data = typeof data === "function" ? data.call(vm) : data;
@@ -961,8 +986,8 @@
   }
 
   //Vue初始化  扩展原型方法
+  // 将initMixin引入，并将Vue传过去，相当于扩展了init方法
   //可以拆分逻辑到不同的文件中 更利于代码维护  模块化的概念
-
   initMixin(Vue); //初始化混合
 
   // Vue.prototype._init = function (options) {

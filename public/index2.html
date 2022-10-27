@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Document</title>
+  </head>
+
+  <body>
+    <script src="/dist/vue.js"></script>
+    <!--
+      初渲染流程
+      1.对数据进行拦截  对象  数组 (依赖收集)
+      2.template模板 ->变成虚拟DOM  先解析成AST语法树(描述语法的) -> render函数 -> 虚拟DOM
+      3.每new Vue 都会产生一个watcher(渲染watcher)  vm._update(vm._render()) 创建真实节点
+
+      -->
+
+    <div id="app" style="background: pink">
+      <ul>
+        <li>{{name}}</li>
+        <li>{{age}}</li>
+      </ul>
+    </div>
+
+    <script>
+      //响应式数据变化  数据决定视图的样子   数据代理:我们操作数据，视图就得到更新 vue2中用object.defineProperty
+      //数据劫持  对数据的操作进行拦截
+      const vm = new Vue({
+        //vue2 options APi   无法 tree-shaking
+        el: "#app",
+        data() {
+          return {
+            name: "gjk",
+            age: 20,
+            address: "周大福",
+          };
+        },
+      });
+
+      //依赖收集
+      setTimeout(() => {
+        //vm.name = "wyh"; //希望数据更新可以自动更新视图，而不是用户手动触发
+        //vm._update(vm._render()); //强制更新的方法
+        vm.name = "hahah";
+        vm.name = "heh";
+        vm.name = "zf";
+      }, 1000);
+    </script>
+  </body>
+</html>

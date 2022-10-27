@@ -46,8 +46,10 @@ methods.forEach((methods) => {//AOP切片编程   把原有的逻辑 割一刀 �
     }
 
    if(inserted){//如果有值 都需要调observeArray()  这里的this指向调用者 this.__ob__.observeArray(inserted) 
-    ob.observeArray(inserted)
-   }
+       ob.observeArray(inserted)
+      
+      }
+      ob.dep.notify()
     return result
   };
 });

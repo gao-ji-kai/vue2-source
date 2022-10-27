@@ -18,8 +18,8 @@ function Vue(options) {
 }
 
 //Vue初始化  扩展原型方法
+// 将initMixin引入，并将Vue传过去，相当于扩展了init方法
 //可以拆分逻辑到不同的文件中 更利于代码维护  模块化的概念
-
 initMixin(Vue);//初始化混合
 
 // Vue.prototype._init = function (options) {

@@ -20,6 +20,8 @@ class Dep {
     }
 }
 Dep.target = null;//类的静态属性
+
+//收集依赖
 export function pushTarget(watcher) {
     Dep.watcher = watcher
 }

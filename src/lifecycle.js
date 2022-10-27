@@ -7,8 +7,10 @@ export function lifecycleMixin(Vue) {
         //将虚拟节点转换成真实dom
         const vm = this;
 
+        console.log(vm.$options.el,vnode)
         //首次渲染 需要用虚拟节点 来更新真实的dom元素
         //初始化渲染的时候 会创建一个新节点 并且将老节点删掉
+
         //第一次渲染完毕后 拿到新的节点 下次再次渲染时替换上次渲染的结果
         vm.$options.el = patch(vm.$options.el, vnode);
     }

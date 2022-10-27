@@ -4,7 +4,7 @@ let has = {};
 let queue = [];
 
 
-function flusghSchedularQueue() {
+function flushSchedularQueue() {
     for (let i = 0; i < queue.length; i++) {
         let watcher = queue[i]
         watcher.run()
@@ -28,7 +28,7 @@ export function queueWatcher(watcher) {//调度更新几次
         //让queue清空
         if (!pending) {
             pending = true
-            nextTick(flusghSchedularQueue);
+            nextTick(flushSchedularQueue);
 
         }
 

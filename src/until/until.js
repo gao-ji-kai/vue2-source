@@ -12,7 +12,7 @@ function flushCallbacks() {
 //第一次cb是渲染watcher  更新操作  (渲染watcher执行的过程肯定是同步的)
 //第二次的cb是用户传入的回调
 let waiting = false; 
-export function nextTick(cb) {  W
+export function nextTick(cb) {  
     callbacks.push(cb)//目前默认的cb  是渲染逻辑  用户的逻辑放到渲染逻辑之后即可
 
     if (!waiting) {

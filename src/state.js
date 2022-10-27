@@ -1,5 +1,11 @@
 import { observe } from "./observer/index.js";
 
+
+//初始化状态函数中，主要是针对不同情况做不同的初始化。
+//例如传入data，传入props，传入methods等等，需要分别初始化。
+
+
+
 //vue的数据   data props computed  watch...
 export function initState(vm) {
   //将所有数据都定义在vm属性上，并且后续更改需要触发视图更新
@@ -44,7 +50,7 @@ function initData(vm) {
   //console.log(vm);
   //进行数据劫持  Object.defineProperty
   //拿到用户传来的数据
-  let data = vm.$options.data; //拿到的data有两种情况  一种是对象，一种是函数
+  let data = vm.$options.data; //拿到的data有两种情况  一种是对象，一种是函数 根实例可以是对象，可以是函数，组件中data必须是函数
   //对data类型进行判断  如果是函数  获取函数返回值作为对象
   //用call是为了保证date中如果写了this  保证this永远指向当前的实例
   data = vm._data = typeof data === "function" ? data.call(vm) : data;

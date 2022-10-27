@@ -9,6 +9,8 @@ class Observer {
 
     //增加一个自定义属性
     //value.__ob__=this;
+
+    this.dep = new Dep();//给数组本身和对象本身增加一个dep属性
     Object.defineProperty(value, "__ob__", {
       value: this,
       enumerable: false, //不能被枚举 表示  不能被循环
@@ -30,7 +32,7 @@ class Observer {
   //监测数组变化
   observeArray(value) {
     //拿到数组每一项
-    for (let i = 0; i < value.length; i++) {
+    for (let i = 0; i < value.length; i++) {//如果数组中是对象的话  就会去递归观测  观测对的时候会增加__ob__属性
       observe(value[i]);
     }
   }
@@ -42,20 +44,37 @@ class Observer {
     });
   }
 }
+function dependArray(value) {//该方法就是让里层数组收集外层数组的依赖，这样修改里层数也可以更新视图
+  for (let i = 0; i < value.length; i++){
+    let current = value[i];
+    current.__obj__ && current.__obj__.dep.depend()//让里层的和外层的 收集的都是用一个watcher
+    if (Array.isArray(current)) {
+      dependArray(current)
+    }
+  }
+}
 
-function defineReactive(data, key, value) {
+ export function defineReactive(data, key, value) {
+  console.log(value,'444')
   //vue2中数据嵌套不要过深，过深浪费性能
 
   //value的值可能是个对象
-  observe(value); //对结果进行递归拦截
-
+ let childOb= observe(value); //对结果进行递归拦截
+  //console.log(childOb.dep)
   //defineProperty是重写了get，set方法，而proxy是设置一个代理  不用改写原对象
   let dep = new Dep//观察者模式  每次都会给属性创建个dep
   Object.defineProperty(data, key, {//需要给每个属性都增加个dep
     get() {
       if (Dep.target) {
         dep.depend();//让这个属性自己的dep记住这个watcher  也会让watcher记住这个dep   一个双向的过程
-      }
+        //childOb有可能是对象  有可能是数组
+        if (childOb) {//如果对数组取值 会将当前的watcher和数组进行关联
+          childOb.dep.depend();
+          if (Array.isArray(value)) {
+            dependArray(value)
+          }
+        }
+      } 
       console.log(key)
       return value;
     },
