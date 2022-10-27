@@ -7,50 +7,28 @@
     <title>Document</title>
   </head>
   <body>
-    <div id="app"></div>
+    <div id="app">
+      <my-button></my-button>
+    </div>
     <script src="/dist/vue.js"></script>
     <script>
-        //mergeOptions 实现原理   典型的发布订阅模式
-      Vue.mixin({   //静态方法
-        a:1,
-        //会将mixin和下面的合并  进行对比  会合并成一个数组
-        beforeCreate() {
-          //组件创建之前
-          console.log("beforeCreate1");
-        },
-        created() {
-          //数据已经被劫持
-          console.log("created1");
-        },
-      });
-       Vue.mixin({   //静态方法
-        //会将mixin和下面的合并  进行对比  会合并成一个数组
-        beforeCreate() {
-          //组件创建之前
-          console.log("beforeCreate1");
-        },
-        created() {
-          //数据已经被劫持
-          console.log("created1");
-        },
-      });
-    
+      // Vue.component =>Vue.extend => 返回通过对象创建一个类  通过这个类去创建一个组件去使用
+      Vue.component('my-button',{
+        template:'<button>按钮</button>'
+      })
+
+      
+
+
+
+      //先查找自己身上是否存在 没有  查找父亲的  __proto__object.create
       const vm = new Vue({
         el: "#app",
-        beforeCreate() {
-          //组件创建之前
-          console.log("beforeCreate2");
-        },
-        created() {
-          //数据已经被劫持
-          console.log("created2");
-        },
-        // beforeMount() {//渲染之前
-
-        // },
-        // mounted() {//调用render方法
-
-        // },
+       components:{
+        'my-button':{
+          template:'<button>内部按钮</button>'
+        }
+       }
       });
     </script>
   </body>

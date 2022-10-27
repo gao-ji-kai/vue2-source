@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="/dist/vue.js"></script>
+    <script>
+        //mergeOptions 实现原理   典型的发布订阅模式
+      Vue.mixin({   //静态方法
+        a:1,
+        //会将mixin和下面的合并  进行对比  会合并成一个数组
+        beforeCreate() {
+          //组件创建之前
+          console.log("beforeCreate1");
+        },
+        created() {
+          //数据已经被劫持
+          console.log("created1");
+        },
+      });
+       Vue.mixin({   //静态方法
+        //会将mixin和下面的合并  进行对比  会合并成一个数组
+        beforeCreate() {
+          //组件创建之前
+          console.log("beforeCreate1");
+        },
+        created() {
+          //数据已经被劫持
+          console.log("created1");
+        },
+      });
+    
+      const vm = new Vue({
+        el: "#app",
+        beforeCreate() {
+          //组件创建之前
+          console.log("beforeCreate2");
+        },
+        created() {
+          //数据已经被劫持
+          console.log("created2");
+        },
+        // beforeMount() {//渲染之前
+
+        // },
+        // mounted() {//调用render方法
+
+        // },
+      });
+    </script>
+  </body>
+</html>
