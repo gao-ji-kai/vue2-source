@@ -63,7 +63,7 @@ strats.components = function (parentVal, childVal) {
     }
     return res
 }
-
+//生命周期合并
 export function mergeOptions(parent, child) {
     //console.log(parent, child)
     const options = {}
@@ -102,3 +102,20 @@ export function mergeOptions(parent, child) {
 
     return options
 }
+
+
+
+//对标签进行过滤   区分哪些是自定义标签
+function makeUP(str) {
+    const map = {
+        
+    }
+    str.split(',').forEach(tagName => {
+        map[tagName]=true
+    })
+    return(tag)=>map[tag]||false
+}
+ 
+ export const isReservedTag = makeUP('a,p,div,ul,li,text,span,input,button')
+
+//console.log(isReservedTag('my-button'))

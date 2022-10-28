@@ -21,12 +21,14 @@ export function initGlobalAPI(Vue) {
         this.options.components[id] = definition;
         console.log(this.options)
     }
+    let cid = 0;
     Vue.extend = function (options) {//子组件初始化时会 new VueComponent()
         //new VueComponent()
         const Super = this;
         const Sub = function VueComponent (options) {
             this._init(options)
         }
+        Sub.cid = cid++;
         Sub.prototype = Object.create(Super.prototype);//都是通过Vue继承来的
         Sub.prototype.constructor = Sub;
         Sub.component = Super.extend;

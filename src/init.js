@@ -4,6 +4,16 @@ import { initState } from "./state";
 import { mergeOptions, nextTick } from "./until/until";
 
 export function initMixin(Vue) {
+
+  /*
+    Vue是如何渲染的 
+    1.Ast
+    2.render
+    3.vnode
+  
+  */
+
+
   Vue.prototype._init = function (options) {
     //console.log(options);
     const vm = this;

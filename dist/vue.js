@@ -173,6 +173,7 @@
     }
     return res;
   };
+  //生命周期合并
   function mergeOptions(parent, child) {
     //console.log(parent, child)
     var options = {};
@@ -209,6 +210,20 @@
     return options;
   }
 
+  //对标签进行过滤   区分哪些是自定义标签
+  function makeUP(str) {
+    var map = {};
+    str.split(',').forEach(function (tagName) {
+      map[tagName] = true;
+    });
+    return function (tag) {
+      return map[tag] || false;
+    };
+  }
+  var isReservedTag = makeUP('a,p,div,ul,li,text,span,input,button');
+
+  //console.log(isReservedTag('my-button'))
+
   function initGlobalAPI(Vue) {
     Vue.options = {}; //用来存储全局的配置   例如   页面调取了两次mixin  就应该将第一的的mixi中的内容先存储 然后将第二个跟第一个做合并
     //filter directive component
@@ -227,6 +242,7 @@
       this.options.components[id] = definition;
       console.log(this.options);
     };
+    var cid = 0;
     Vue.extend = function (options) {
       //子组件初始化时会 new VueComponent()
       //new VueComponent()
@@ -234,6 +250,7 @@
       var Sub = function VueComponent(options) {
         this._init(options);
       };
+      Sub.cid = cid++;
       Sub.prototype = Object.create(Super.prototype); //都是通过Vue继承来的
       Sub.prototype.constructor = Sub;
       Sub.component = Super.extend;
@@ -544,6 +561,14 @@
       return el; //vm.$el
     }
   }
+  function createComponent(vnode) {
+    var i = vnode.data;
+    if ((i = i.hook) && (i = i.init)) {
+      i(vnode); //调用组件的初始化方法
+    }
+
+    return false;
+  }
 
   //根据虚拟节点 创建出真实节点
   function createElm(vnode) {
@@ -554,7 +579,10 @@
       children = vnode.children,
       text = vnode.text;
     if (typeof tag === 'string') {
-      //也可能是个组件 先不考虑
+      //也可能是个组件 先不考虑   两种可能
+
+      //可能是组件，如果是组件就直接根据组件创建出组件对应的真实节点
+      if (createComponent(vnode)) ;
       vnode.el = document.createElement(tag); //用vue的指令时，可以用过vnode拿到真实的dom  虚拟节点配合真实dom
       //更新dom上的属性
       updateProperties(vnode);
@@ -980,6 +1008,14 @@
   }
 
   function initMixin(Vue) {
+    /*
+      Vue是如何渲染的 
+      1.Ast
+      2.render
+      3.vnode
+    
+    */
+
     Vue.prototype._init = function (options) {
       //console.log(options);
       var vm = this;
@@ -1068,22 +1104,51 @@
     for (var _len = arguments.length, children = new Array(_len > 3 ? _len - 3 : 0), _key = 3; _key < _len; _key++) {
       children[_key - 3] = arguments[_key];
     }
-    return vnode(vm, tag, data, data.key, children, undefined);
+    //需要对标签名做过滤   因为有可能标签名是一个自定义组件
+    if (isReservedTag(tag)) {
+      return vnode(vm, tag, data, data.key, children, undefined);
+    } else {
+      //是一个组件标签
+      var Ctor = vm.$options.components[tag]; //对象或者函数
+      return createComponent$1(vm, tag, data, data.key, children, Ctor);
+    }
   }
+  function createComponent$1(vm, tag, data, key, children, Ctor) {
+    if (isObject(Ctor)) {
+      Ctor = vm.$options._base.extend(Ctor);
+    }
+    //console.log(Ctor)
+    //给组件增加生命周期
+    data.hook = {
+      init: function init(vnode) {
+        //调用子组件的构造函数
+        vnode.componentInstance = new vnode.componentOptions.Ctor({});
+      } //初始化的钩子
+    };
+    console.log(vnode(vm, "vue-component-".concat(Ctor.cid, "-").concat(tag), data, key, undefined, undefined, {
+      Ctor: Ctor
+    }));
+    //组件的虚拟节点 拥有hook和当前组件的componentOptions中存放了组件的构造函数
+    return vnode(vm, "vue-component-".concat(Ctor.cid, "-").concat(tag), data, key, undefined, undefined, {
+      Ctor: Ctor
+    });
+  }
+
   //导出创建文本虚拟节点
   function createTextVnode(vm, text) {
     return vnode(vm, undefined, undefined, undefined, undefined, text);
   }
 
   //vue底层用的是个类 这里用个方法
-  function vnode(vm, tag, data, key, children, text) {
+  function vnode(vm, tag, data, key, children, text, componentOptions) {
     return {
       vm: vm,
       tag: tag,
       children: children,
       data: data,
       key: key,
-      text: text
+      text: text,
+      componentOptions: componentOptions
     };
   }
   //vnode(虚拟DOM)和AST(抽象树)  vnode 可以随意添加属性  AST是针对语法解析出来的结构不能添加不存在的属性
