@@ -33,7 +33,6 @@ function createComponent(vnode) {
 function createElm(vnode) {
     let { vm, tag, data, key, children, text } = vnode
     if (typeof tag === 'string') {//也可能是个组件 先不考虑   两种可能
-
         //可能是组件，如果是组件就直接根据组件创建出组件对应的真实节点
         if (createComponent(vnode)) {
             //如果返回true说明这个虚拟节点是组件
@@ -41,9 +40,6 @@ function createElm(vnode) {
             //如果是组件  就将组件渲染后的真实元素给我
             return
         }
-
-
-
 
         vnode.el = document.createElement(tag);//用vue的指令时，可以用过vnode拿到真实的dom  虚拟节点配合真实dom
         //更新dom上的属性
@@ -76,7 +72,7 @@ function updateProperties(vnode) {
             el.className = newProps.class
         } else {
             el.setAttribute(key, newProps[key])
-
         }
     }
 }
+
